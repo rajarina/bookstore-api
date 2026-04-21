@@ -5,6 +5,21 @@ const path = require("path");
 const router = express.Router();
 const DB_PATH = path.join(__dirname, "../data/db.json");
 
+const SEED = {
+  books: [
+    { id: 1, title: "The Pragmatic Programmer", author: "David Thomas & Andrew Hunt", price: 49.99, stock: 12, createdAt: "2024-01-10T08:00:00.000Z" },
+    { id: 2, title: "Clean Code", author: "Robert C. Martin", price: 39.99, stock: 8, createdAt: "2024-01-15T09:30:00.000Z" },
+    { id: 3, title: "You Don't Know JS", author: "Kyle Simpson", price: 29.99, stock: 20, createdAt: "2024-02-01T10:00:00.000Z" },
+    { id: 4, title: "Designing Data-Intensive Applications", author: "Martin Kleppmann", price: 54.99, stock: 5, createdAt: "2024-02-20T11:15:00.000Z" },
+    { id: 5, title: "The Art of Computer Programming", author: "Donald E. Knuth", price: 89.99, stock: 3, createdAt: "2024-03-05T14:00:00.000Z" },
+  ],
+};
+
+if (!fs.existsSync(DB_PATH)) {
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  fs.writeFileSync(DB_PATH, JSON.stringify(SEED, null, 2));
+}
+
 function readDB() {
   return JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
 }
