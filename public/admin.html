@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bookstore Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6f8;
+      color: #1a1a2e;
+      padding: 2rem;
+    }
+
+    h1 { font-size: 1.6rem; margin-bottom: 1.5rem; }
+    h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #444; }
+
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+    }
+
+    form input {
+      padding: .55rem .75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: .95rem;
+      width: 100%;
+    }
+
+    form input:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 2px rgba(79,70,229,.15);
+    }
+
+    .form-actions {
+      grid-column: span 2;
+      display: flex;
+      gap: .5rem;
+    }
+
+    .form-actions button {
+      flex: 1;
+      padding: .6rem;
+      border: none;
+      border-radius: 6px;
+      font-size: .95rem;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    #btn-submit  { background: #4f46e5; }
+    #btn-submit:hover { background: #4338ca; }
+    #btn-cancel  { background: #6b7280; display: none; }
+    #btn-cancel:hover { background: #4b5563; }
+
+    #form-msg {
+      grid-column: span 2;
+      font-size: .85rem;
+      min-height: 1.2em;
+    }
+    #form-msg.ok  { color: #16a34a; }
+    #form-msg.err { color: #dc2626; }
+
+    /* editing state — highlight the card */
+    .card.editing { border: 2px solid #4f46e5; }
+    .card.editing h2::after {
+      content: " (editing)";
+      font-size: .8rem;
+      color: #4f46e5;
+      font-weight: normal;
+    }
+
+    /* table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    thead { background: #4f46e5; color: #fff; }
+    th, td { padding: .7rem 1rem; text-align: left; font-size: .9rem; }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    tbody tr:hover { background: #eef2ff; }
+    tbody tr.active-edit { background: #eef2ff; outline: 2px solid #4f46e5; }
+
+    .actions { display: flex; gap: .4rem; }
+
+    .btn-edit, .btn-delete {
+      padding: .35rem .7rem;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: .82rem;
+    }
+    .btn-edit   { background: #f59e0b; }
+    .btn-edit:hover { background: #d97706; }
+    .btn-delete { background: #ef4444; }
+    .btn-delete:hover { background: #dc2626; }
+
+    #table-msg {
+      margin-top: .75rem;
+      font-size: .85rem;
+      min-height: 1.2em;
+      color: #dc2626;
+    }
+
+    /* edit modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.75rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    }
+
+    .modal h2 { margin-bottom: 1rem; }
+
+    .modal form {
+      grid-template-columns: 1fr;
+    }
+
+    .modal .form-actions { grid-column: span 1; }
+
+    #modal-msg {
+      font-size: .85rem;
+      min-height: 1.2em;
+      color: #dc2626;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Bookstore Admin</h1>
+
+  <!-- Add book -->
+  <div class="card" id="add-card">
+    <h2>Add New Book</h2>
+    <form id="add-form">
+      <input name="title"  placeholder="Title"  required />
+      <input name="author" placeholder="Author" required />
+      <input name="price"  placeholder="Price (e.g. 29.99)" type="number" step="0.01" min="0" required />
+      <input name="stock"  placeholder="Stock"  type="number" min="0" required />
+      <p id="form-msg"></p>
+      <div class="form-actions">
+        <button type="submit" id="btn-submit">Add Book</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Books table -->
+  <div class="card">
+    <h2>All Books</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Title</th><th>Author</th>
+          <th>Price</th><th>Stock</th><th>Added</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="books-body"></tbody>
+    </table>
+    <p id="table-msg"></p>
+  </div>
+
+  <!-- Edit modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal">
+      <h2>Edit Book</h2>
+      <form id="edit-form">
+        <input name="title"  placeholder="Title"  required />
+        <input name="author" placeholder="Author" required />
+        <input name="price"  placeholder="Price"  type="number" step="0.01" min="0" required />
+        <input name="stock"  placeholder="Stock"  type="number" min="0" required />
+        <p id="modal-msg"></p>
+        <div class="form-actions">
+          <button type="submit" style="background:#4f46e5">Save Changes</button>
+          <button type="button" id="modal-cancel" style="background:#6b7280">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API = "/api/books";
+    let editingId = null;
+
+    async function loadBooks() {
+      const tbody = document.getElementById("books-body");
+      const msg   = document.getElementById("table-msg");
+      try {
+        const res   = await fetch(API);
+        const books = await res.json();
+        tbody.innerHTML = books.length === 0
+          ? '<tr><td colspan="7" style="text-align:center;color:#888">No books yet.</td></tr>'
+          : books.map(b => `
+              <tr data-id="${b.id}">
+                <td>${b.id}</td>
+                <td>${esc(b.title)}</td>
+                <td>${esc(b.author)}</td>
+                <td>$${Number(b.price).toFixed(2)}</td>
+                <td>${b.stock}</td>
+                <td>${new Date(b.createdAt).toLocaleDateString()}</td>
+                <td class="actions">
+                  <button class="btn-edit"
+                    data-id="${b.id}"
+                    data-title="${esc(b.title)}"
+                    data-author="${esc(b.author)}"
+                    data-price="${b.price}"
+                    data-stock="${b.stock}">Edit</button>
+                  <button class="btn-delete" data-id="${b.id}">Delete</button>
+                </td>
+              </tr>`).join("");
+        msg.textContent = "";
+      } catch {
+        msg.textContent = "Failed to load books.";
+      }
+    }
+
+    // ── Delete ────────────────────────────────────────────
+    async function deleteBook(id) {
+      if (!confirm("Delete this book?")) return;
+      const res = await fetch(`${API}/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        loadBooks();
+      } else {
+        document.getElementById("table-msg").textContent = "Delete failed.";
+      }
+    }
+
+    // ── Open edit modal ───────────────────────────────────
+    function openEdit(btn) {
+      editingId = btn.dataset.id;
+      const form = document.getElementById("edit-form");
+      form.title.value  = btn.dataset.title;
+      form.author.value = btn.dataset.author;
+      form.price.value  = btn.dataset.price;
+      form.stock.value  = btn.dataset.stock;
+      document.getElementById("modal-msg").textContent = "";
+      document.getElementById("modal-backdrop").classList.add("open");
+    }
+
+    function closeModal() {
+      editingId = null;
+      document.getElementById("modal-backdrop").classList.remove("open");
+    }
+
+    document.getElementById("modal-cancel").addEventListener("click", closeModal);
+    document.getElementById("modal-backdrop").addEventListener("click", e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    // ── Save edit ─────────────────────────────────────────
+    document.getElementById("edit-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const msg  = document.getElementById("modal-msg");
+      const data = Object.fromEntries(new FormData(e.target));
+
+      const res = await fetch(`${API}/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title:  data.title,
+          author: data.author,
+          price:  parseFloat(data.price),
+          stock:  parseInt(data.stock),
+        }),
+      });
+
+      if (res.ok) {
+        closeModal();
+        loadBooks();
+      } else {
+        const err = await res.json();
+        msg.textContent = err.error || "Save failed.";
+      }
+    });
+
+    // ── Add book ──────────────────────────────────────────
+    document.getElementById("add-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const msg  = document.getElementById("form-msg");
+      const data = Object.fromEntries(new FormData(e.target));
+      msg.className = "";
+      msg.textContent = "";
+
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title:  data.title,
+          author: data.author,
+          price:  parseFloat(data.price),
+          stock:  parseInt(data.stock),
+        }),
+      });
+
+      if (res.ok) {
+        msg.className   = "ok";
+        msg.textContent = "Book added!";
+        e.target.reset();
+        loadBooks();
+      } else {
+        const err = await res.json();
+        msg.className   = "err";
+        msg.textContent = err.error || "Failed to add book.";
+      }
+    });
+
+    // ── Table button delegation ───────────────────────────
+    document.getElementById("books-body").addEventListener("click", e => {
+      if (e.target.classList.contains("btn-delete")) deleteBook(e.target.dataset.id);
+      if (e.target.classList.contains("btn-edit"))   openEdit(e.target);
+    });
+
+    function esc(str) {
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    loadBooks();
+  </script>
+</body>
+</html>
