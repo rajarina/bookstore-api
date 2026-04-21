@@ -1,0 +1,12 @@
+{
+  "name": "bookstore-api",
+  "version": "1.0.0",
+  "description": "A simple RESTful bookstore API built with Express.js",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
